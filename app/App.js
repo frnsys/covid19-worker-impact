@@ -14,7 +14,7 @@ const SECTIONS = {
     key: 'impact',
     title: 'Impact'
   }, {
-    key: 'company-respose',
+    key: 'company-response',
     title: 'Company response'
   }, {
     key: 'relief',
@@ -88,9 +88,8 @@ const Section = (props) => {
 
             return <li key={i}>
               <h6>{r.type}</h6>
-              {scope ? <h4>{scope}</h4> : ''}
-              {r.location ? <h4>{r.location}</h4> : ''}
-              {r.type == 'anecdote' ? <p className="description">{r.description}</p> : '' }
+              {scope ? <h4>{scope}{r.location ? <span className="location">, {r.location}</span> : ''}</h4> : ''}
+              {r.type == 'anecdote' ? <p>{r.description}</p> : '' }
               {SECTIONS[r.type].map((s, i) => (
                 r[s.key] ?
                   <div key={i}>
