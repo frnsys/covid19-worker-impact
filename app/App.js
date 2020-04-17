@@ -57,7 +57,7 @@ const Header = (props) => (
           <Link
             key={i}
             className={props.path == `/${ind}` ? 'selected': ''}
-            to={`/${ind}`}>{props.industries[ind].name}</Link>
+            to={`/${ind}`}>{props.industries[ind].name.replace(/\(.+\)/,'').trim()}</Link>
         ))}
       </div>
     </nav>
@@ -69,6 +69,10 @@ const Section = (props) => {
   return (
     <section>
       <h2>{props.name}</h2>
+      {props.summary ? <div className="summary">
+        <h6>Summary</h6>
+        <p>{props.summary}</p>
+      </div> : ''}
       {responses.length == 0 ?
         <h3>No results</h3> :
         <ul className="responses">
@@ -87,7 +91,7 @@ const Section = (props) => {
             }
 
             return <li key={i}>
-              <h6>{r.type}</h6>
+              <h6>{r.type} <span className="when">{r.when}</span></h6>
               {scope ? <h4>{scope}{r.location ? <span className="location">, {r.location}</span> : ''}</h4> : ''}
               {r.type == 'anecdote' ? <p>{r.description}</p> : '' }
               {SECTIONS[r.type].map((s, i) => (
@@ -119,6 +123,15 @@ class App extends Component {
 
   componentWillMount() {
     const industries = {};
+    const summaries = {};
+    sheet.load(SPREADSHEET_ID, 3, rows => {
+      rows.forEach((r) => {
+        let slug = slugify(r.industry);
+        summaries[slug] = r.summary;
+      });
+      this.setState({ summaries });
+    });
+
     sheet.load(SPREADSHEET_ID, SPREADSHEET_NUM, rows => {
       rows.map(r => {
         let type = RESPONSE_TYPE_MAP[r['response-type']];
@@ -143,7 +156,7 @@ class App extends Component {
       this.setState({ industries });
     });
 
-    this.setState({ industries });
+    this.setState({ industries, summaries });
   }
 
   updateFilter(filter) {
@@ -169,7 +182,7 @@ class App extends Component {
             <Route path='/' exact render={() => (
               <div>
                 {Object.keys(this.state.industries).map((ind, i) => (
-                  <Section key={i} {...this.state.industries[ind]} />
+                  <Section key={i} summary={this.state.summaries[ind]} {...this.state.industries[ind]} />
                 ))}
               </div>
             )}/>
@@ -185,7 +198,7 @@ class App extends Component {
                   document.title = `${TITLE} : ${ind.name}`;
                   return (
                     <div>
-                      <Section {...ind} />
+                      <Section summary={this.state.summaries[match.params.slug]} {...ind} />
                     </div>
                   );
                 } else {
