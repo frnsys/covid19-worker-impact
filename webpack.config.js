@@ -30,7 +30,9 @@ module.exports = {
     extensions: ['.js']
   },
   devServer: {
-    historyApiFallback: true,
+    historyApiFallback: {
+      index: 'index.html'
+    },
     writeToDisk: true
   }
 };

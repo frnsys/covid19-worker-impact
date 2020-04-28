@@ -1,6 +1,8 @@
 import sheet from './Sheet';
+import marked from 'marked';
+import DOMPurify from 'dompurify';
 import React, {Component} from 'react';
-import {BrowserRouter as Router, Route, Link} from 'react-router-dom';
+import {BrowserRouter as Router, Route, Link, Switch} from 'react-router-dom';
 
 const TITLE = 'COVID-19 Worker Impact';
 const SPREADSHEET_ID = '1dwwhj2zVtQdUfk9eJiFJz-BKt3-ukH3oaGJp2MBtpSg';
@@ -45,7 +47,10 @@ function slugify(str) {
 
 const Header = (props) => (
   <header>
-    <h1>COVID-19 Worker Impact</h1>
+    <div className="title">
+      <h1>COVID-19 Worker Impact</h1>
+      <Link to='/about'>About</Link>
+    </div>
     <nav>
       <h2>View by industry</h2>
       <div>
@@ -137,6 +142,7 @@ class App extends Component {
   }
 
   componentWillMount() {
+    const about = {};
     const industries = {};
     const summaries = {};
     const tags = {};
@@ -146,6 +152,14 @@ class App extends Component {
         summaries[slug] = r.summary;
       });
       this.setState({ summaries });
+    });
+
+    sheet.load(SPREADSHEET_ID, 4, rows => {
+      let description = rows[0].body;
+      about.description = DOMPurify.sanitize(marked(description));
+
+      let scope = rows[1].body;
+      about.scope = DOMPurify.sanitize(marked(scope));
     });
 
     sheet.load(SPREADSHEET_ID, SPREADSHEET_NUM, rows => {
@@ -185,7 +199,7 @@ class App extends Component {
       this.setState({ industries, tags });
     });
 
-    this.setState({ industries, tags, summaries });
+    this.setState({ industries, tags, summaries, about });
   }
 
   updateFilter(filter) {
@@ -204,66 +218,81 @@ class App extends Component {
   render() {
     return (
       <Router>
-        <Route path='/' render={(props) => (
-          <div>
-            <Header path={props.location.pathname} {...this.state} />
-            <div><input placeholder="Search" type='text' onChange={(ev) => this.updateFilter(ev.target.value)} /></div>
-            <Route path='/' exact render={() => (
-              <div>
-                {Object.keys(this.state.industries).map((ind, i) => (
-                  <Section key={i} summary={this.state.summaries[ind]} {...this.state.industries[ind]} />
-                ))}
-              </div>
-            )}/>
-            <Route path='/tags/:slug' render={({match}) => {
-              if (Object.keys(this.state.tags).length === 0) {
-                return (
-                  <div>
-                    <h1 className='loading'>Loading...</h1>
-                  </div>);
-              } else {
-                let tag = this.state.tags[match.params.slug];
-                if (tag) {
-                  return <div>
-                    <Section summary={''} {...tag} />
-                  </div>
-                } else {
-                  document.title = `${TITLE} : 404`;
-                  return (
-                    <div>
-                      <h1 className='loading'>Sorry, nothing found.</h1>
-                    </div>);
-                }
-              }
-            }} />
+        <Switch>
+          <Route path='/about' render={(props) => (
+            <div>
+              <Header path={props.location.pathname} {...this.state} />
+              <div className="about">
+                <h2>About</h2>
+                <section dangerouslySetInnerHTML={{__html: this.state.about.description || ''}}></section>
 
-            <Route path='/:slug' render={({match}) => {
-              if (match.params.slug == 'tags') return null;
-              if (Object.keys(this.state.industries).length === 0) {
-                return (
-                  <div>
-                    <h1 className='loading'>Loading...</h1>
-                  </div>);
-              } else {
-                let ind = this.state.industries[match.params.slug];
-                if (ind) {
-                  document.title = `${TITLE} : ${ind.name}`;
-                  return (
-                    <div>
-                      <Section summary={this.state.summaries[match.params.slug]} {...ind} />
-                    </div>
-                  );
-                } else {
-                  document.title = `${TITLE} : 404`;
-                  return (
-                    <div>
-                      <h1 className='loading'>Sorry, nothing found.</h1>
-                    </div>);
-                }
-              }
-            }} />
-          </div>
-        )}/>
+                <h3>Scope</h3>
+                <section dangerouslySetInnerHTML={{__html: this.state.about.scope || ''}}></section>
+              </div>
+            </div>
+          )} />
+          <Route path='/' render={(props) => (
+            <div>
+              <Header path={props.location.pathname} {...this.state} />
+              <div><input placeholder="Search" type='text' onChange={(ev) => this.updateFilter(ev.target.value)} /></div>
+              <Route path='/' exact render={() => (
+                <div>
+                  {Object.keys(this.state.industries).map((ind, i) => (
+                    <Section key={i} summary={this.state.summaries[ind]} {...this.state.industries[ind]} />
+                  ))}
+                </div>
+              )}/>
+              <Switch>
+                <Route path='/tags/:slug' render={({match}) => {
+                  if (Object.keys(this.state.tags).length === 0) {
+                    return (
+                      <div>
+                        <h1 className='loading'>Loading...</h1>
+                      </div>);
+                  } else {
+                    let tag = this.state.tags[match.params.slug];
+                    if (tag) {
+                      return <div>
+                        <Section summary={''} {...tag} />
+                      </div>
+                    } else {
+                      document.title = `${TITLE} : 404`;
+                      return (
+                        <div>
+                          <h1 className='loading'>Sorry, nothing found.</h1>
+                        </div>);
+                    }
+                  }
+                }} />
+
+                <Route path='/:slug' render={({match}) => {
+                  if (Object.keys(this.state.industries).length === 0) {
+                    return (
+                      <div>
+                        <h1 className='loading'>Loading...</h1>
+                      </div>);
+                  } else {
+                    let ind = this.state.industries[match.params.slug];
+                    if (ind) {
+                      document.title = `${TITLE} : ${ind.name}`;
+                      return (
+                        <div>
+                          <Section summary={this.state.summaries[match.params.slug]} {...ind} />
+                        </div>
+                      );
+                    } else {
+                      document.title = `${TITLE} : 404`;
+                      return (
+                        <div>
+                          <h1 className='loading'>Sorry, nothing found.</h1>
+                        </div>);
+                    }
+                  }
+                }} />
+              </Switch>
+            </div>
+          )}/>
+        </Switch>
       </Router>
     )
   }
