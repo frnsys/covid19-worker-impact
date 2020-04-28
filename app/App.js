@@ -37,7 +37,7 @@ const SECTIONS = {
 
 
 function slugify(str) {
-  return str.toLowerCase()
+  return str.toLowerCase().trim()
     .replace(/\s+/g, '_')           // replace spaces with _
     .replace(/[^\w\-]+/g, '')       // remove all non-word chars
     .replace(/\-+/g, '_');          // replace - with single _
@@ -58,6 +58,20 @@ const Header = (props) => (
             key={i}
             className={props.path == `/${ind}` ? 'selected': ''}
             to={`/${ind}`}>{props.industries[ind].name.replace(/\(.+\)/,'').trim()}</Link>
+        ))}
+      </div>
+
+      <h2>View by tag</h2>
+      <div>
+        <Link
+          className={props.path == '/' ? 'selected': ''}
+          to={'/'}>All</Link>
+
+        {Object.keys(props.tags).filter((t) => t).map((tag, i) => (
+          <Link
+            key={i}
+            className={props.path == `/tags/${tag}` ? 'selected': ''}
+            to={`/tags/${tag}`}>{props.tags[tag].name.replace(/\(.+\)/,'').trim()}</Link>
         ))}
       </div>
     </nav>
@@ -93,7 +107,8 @@ const Section = (props) => {
             return <li key={i}>
               <h6>{r.type} <span className="when">{r.when}</span></h6>
               {scope ? <h4>{scope}{r.location ? <span className="location">, {r.location}</span> : ''}</h4> : ''}
-              {r.type == 'anecdote' ? <p>{r.description}</p> : '' }
+              {r.tags ? <p className="tags">{r.tags.split(',').map((t, i) => <Link to={`/tags/${slugify(t)}`} className="tag" key={i}>{t.trim()}</Link>)}</p> : ''}
+              {r.type == 'anecdote' ? <p>{r.description}</p> : ''}
               {SECTIONS[r.type].map((s, i) => (
                 r[s.key] ?
                   <div key={i}>
@@ -124,6 +139,7 @@ class App extends Component {
   componentWillMount() {
     const industries = {};
     const summaries = {};
+    const tags = {};
     sheet.load(SPREADSHEET_ID, 3, rows => {
       rows.forEach((r) => {
         let slug = slugify(r.industry);
@@ -143,6 +159,19 @@ class App extends Component {
         });
         data.type = type;
         data.visible = true;
+
+        data.tags.split(',').forEach((t) => {
+          let tag = t.trim();
+          t = slugify(t);
+          if (!(t in tags)) {
+            tags[t] = {
+              name: tag,
+              responses: []
+            };
+          }
+          tags[t].responses.push(data);
+        });
+
         let industry = data['industry']
         let slug = slugify(industry);
         if (!(slug in industries)) {
@@ -153,10 +182,10 @@ class App extends Component {
         }
         industries[slug].responses.push(data);
       });
-      this.setState({ industries });
+      this.setState({ industries, tags });
     });
 
-    this.setState({ industries, summaries });
+    this.setState({ industries, tags, summaries });
   }
 
   updateFilter(filter) {
@@ -177,7 +206,7 @@ class App extends Component {
       <Router>
         <Route path='/' render={(props) => (
           <div>
-            <Header industries={this.state.industries} path={props.location.pathname} />
+            <Header path={props.location.pathname} {...this.state} />
             <div><input placeholder="Search" type='text' onChange={(ev) => this.updateFilter(ev.target.value)} /></div>
             <Route path='/' exact render={() => (
               <div>
@@ -186,7 +215,30 @@ class App extends Component {
                 ))}
               </div>
             )}/>
+            <Route path='/tags/:slug' render={({match}) => {
+              if (Object.keys(this.state.tags).length === 0) {
+                return (
+                  <div>
+                    <h1 className='loading'>Loading...</h1>
+                  </div>);
+              } else {
+                let tag = this.state.tags[match.params.slug];
+                if (tag) {
+                  return <div>
+                    <Section summary={''} {...tag} />
+                  </div>
+                } else {
+                  document.title = `${TITLE} : 404`;
+                  return (
+                    <div>
+                      <h1 className='loading'>Sorry, nothing found.</h1>
+                    </div>);
+                }
+              }
+            }} />
+
             <Route path='/:slug' render={({match}) => {
+              if (match.params.slug == 'tags') return null;
               if (Object.keys(this.state.industries).length === 0) {
                 return (
                   <div>
