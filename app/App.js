@@ -4,7 +4,7 @@ import DOMPurify from 'dompurify';
 import React, {Component} from 'react';
 import {BrowserRouter as Router, Route, Link, Switch} from 'react-router-dom';
 
-const TITLE = 'COVID-19 Worker Impact';
+const TITLE = 'Work After COVID-19';
 const SPREADSHEET_ID = '1dwwhj2zVtQdUfk9eJiFJz-BKt3-ukH3oaGJp2MBtpSg';
 const SPREADSHEET_NUM = 2;
 const RESPONSE_TYPE_MAP = {
@@ -48,7 +48,7 @@ function slugify(str) {
 const Header = (props) => (
   <header>
     <div className="title">
-      <h1>COVID-19 Worker Impact</h1>
+      <h1>Work After COVID-19</h1>
       <Link to='/about'>About</Link>
     </div>
     <nav>
